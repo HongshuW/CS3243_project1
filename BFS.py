@@ -15,9 +15,12 @@ class State:
         self.moves = moves
         self.nodesExplored = nodesExplored
 
-def search():
+def search(goals):
     moves = []
     nodesExplored = 0
+
+    if (len(goals) == 0 or (len(goals) == 1 and "-" in goals)):
+        return moves, nodesExplored
 
     return moves, nodesExplored
 
@@ -68,10 +71,10 @@ def run_BFS():
         own_pieces[information[0]].add(information[1])
         i += 1
     # parse goal position
-    goal = lines[i][31:].split()
+    goals = set(lines[i][31:].split())
 
     # Search for path
-    moves, nodesExplored = search() #For reference
+    moves, nodesExplored = search(goals) #For reference
     return moves, nodesExplored #Format to be returned
 
-run_BFS()
+print(run_BFS())
