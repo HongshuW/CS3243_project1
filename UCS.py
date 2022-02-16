@@ -258,7 +258,7 @@ class Board:
 
     def able_to_move_to(self, location):
         grid = self.get_grid(location)
-        return not (grid.piece != None or grid.is_blocked or grid.is_reached)
+        return not (grid.piece != None or grid.is_blocked)
 
     def to_string(self):
         string = ""
