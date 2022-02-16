@@ -1,5 +1,6 @@
 import sys
 from collections import deque
+from queue import PriorityQueue
 
 # Helper functions to aid in your implementation. Can edit/remove
 class Piece:
@@ -288,18 +289,49 @@ def get_position_string(col_char, row):
 def get_position_tuple(col_char, row):
     return (col_char, int(row))
 
-def get_moves_from_goal(grid):
+def get_info_from_goal(grid):
     moves = deque()
+    cost = 0
     parent = grid.parent
     while not (parent is None):
         move = [parent.get_location(), grid.get_location()]
         moves.appendleft(move)
+        cost += grid.cost
         grid = parent
         parent = grid.parent
-    return list(moves)
+    return list(moves), cost
 
 def search(king, board, state, goals):
-    pass
+    moves = []
+    nodesExplored = 0
+    # no goals, return empty list
+    if (len(goals) == 0 or (len(goals) == 1 and "-" in goals)):
+        return moves, nodesExplored, 0
+
+    # UCS uses priority queue
+    frontier = PriorityQueue()
+    cost_of_origin = board.get_grid(state.location).cost
+    frontier.put((cost_of_origin, state.location))
+    board.set_reached(state.location)
+    length = 1
+    while length > 0:
+        current = frontier.get()
+        length -= 1
+        nodesExplored += 1
+        if board.is_goal(current[1]):
+            grid = board.get_grid(current[1])
+            moves, cost = get_info_from_goal(grid)
+            return moves, nodesExplored, cost
+        row_char = current[1][1]
+        col_char = current[1][0]
+        movements = king.get_king_movements_list(int(row_char), get_col_int(col_char), board)
+        for movement in movements:
+            if not board.is_reached(movement):
+                frontier.put((current[0] + board.get_grid(movement).cost, movement))
+                length += 1
+                board.set_reached(movement)
+                board.set_parent(movement, current[1])
+    return moves, nodesExplored, 0
 
 
 ### DO NOT EDIT/REMOVE THE FUNCTION HEADER BELOW###
