@@ -1,5 +1,6 @@
 import sys
 from collections import deque
+from queue import PriorityQueue
 
 # Helper functions to aid in your implementation. Can edit/remove
 class Piece:
@@ -38,7 +39,7 @@ class Piece:
             while j < col_int + 2:
                 if i >= 0 and i < rows and j >= 0 and j < cols:
                     position = get_position_tuple(get_col_char(j), i)
-                    if board.able_to_move_to(position):
+                    if board.able_to_move_to(position) and (not (i == row_int and j == col_int)):
                         moves.append(position)
                 j += 1
             i += 1
@@ -257,7 +258,7 @@ class Board:
 
     def able_to_move_to(self, location):
         grid = self.get_grid(location)
-        return not (grid.piece != None or grid.is_blocked or grid.is_reached)
+        return not (grid.piece != None or grid.is_blocked)
 
     def to_string(self):
         string = ""
@@ -288,18 +289,68 @@ def get_position_string(col_char, row):
 def get_position_tuple(col_char, row):
     return (col_char, int(row))
 
-def get_moves_from_goal(grid):
+def get_info_from_goal(grid):
     moves = deque()
+    cost = 0
     parent = grid.parent
     while not (parent is None):
         move = [parent.get_location(), grid.get_location()]
         moves.appendleft(move)
+        cost += grid.cost
         grid = parent
         parent = grid.parent
-    return list(moves)
+    return list(moves), cost
 
-def search():
-    pass
+def heuristic(grid, goals):
+    min_distance = 25
+    grid_row = grid.get_row_as_int()
+    grid_col = grid.get_col_as_int()
+    for goal in goals:
+        goal_row = int(goal[1:])
+        goal_col = get_col_int(goal[0])
+        distance = max(abs(goal_row - grid_row), abs(goal_col - grid_col))
+        if distance < min_distance:
+            min_distance = distance
+    return min_distance
+
+def search(king, board, state, goals):
+    moves = []
+    nodesExplored = 0
+    # no goals, return empty list
+    if (len(goals) == 0 or (len(goals) == 1 and "-" in goals)):
+        return moves, nodesExplored, 0
+
+    # A* uses priority queue
+    frontier = PriorityQueue()
+    reached = dict()
+    origin = board.get_grid(state.location)
+    cost_of_origin = origin.cost + heuristic(origin, goals)
+    reached[state.location] = cost_of_origin
+    frontier.put((cost_of_origin, (origin.cost, state.location)))
+    board.set_reached(state.location)
+    length = 1
+    while length > 0:
+        current = frontier.get()
+        length -= 1
+        nodesExplored += 1
+        if board.is_goal(current[1][1]):
+            grid = board.get_grid(current[1][1])
+            moves, cost = get_info_from_goal(grid)
+            return moves, nodesExplored, cost
+        row_char = current[1][1][1]
+        col_char = current[1][1][0]
+        movements = king.get_king_movements_list(int(row_char), get_col_int(col_char), board)
+        for movement in movements:
+            next_grid = board.get_grid(movement)
+            g = current[1][0] + next_grid.cost
+            new_cost = g + heuristic(next_grid, goals)
+            if (not (movement in reached)) or new_cost < reached[movement]:
+                reached[movement] = new_cost
+                frontier.put((new_cost, (g, movement)))
+                length += 1
+                board.set_reached(movement)
+                board.set_parent(movement, current[1][1])
+    return moves, nodesExplored, 0
 
 
 ### DO NOT EDIT/REMOVE THE FUNCTION HEADER BELOW###
@@ -392,5 +443,7 @@ def run_AStar():
 
     king_location = state.location
     king = board.get_grid(king_location).piece
-    moves, nodesExplored, pathCost= search() #For reference
+    moves, nodesExplored, pathCost= search(king, board, state, goals) #For reference
     return moves, nodesExplored, pathCost #Format to be returned
+
+print(run_AStar())
