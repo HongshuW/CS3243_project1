@@ -39,7 +39,7 @@ class Piece:
             while j < col_int + 2:
                 if i >= 0 and i < rows and j >= 0 and j < cols:
                     position = get_position_tuple(get_col_char(j), i)
-                    if board.able_to_move_to(position):
+                    if board.able_to_move_to(position) and (not (i == row_int and j == col_int)):
                         moves.append(position)
                 j += 1
             i += 1
