@@ -32,12 +32,16 @@ class Piece:
         rows = board.height
         cols = board.width
         moves = list()
-        for i in range(row_int - 1, row_int + 2):
-            for j in range(col_int - 1, col_int + 2):
+        i = row_int - 1
+        while i < row_int + 2:
+            j = col_int - 1
+            while j < col_int + 2:
                 if i >= 0 and i < rows and j >= 0 and j < cols:
                     position = get_position_tuple(get_col_char(j), i)
                     if board.able_to_move_to(position):
                         moves.append(position)
+                j += 1
+            i += 1
         return moves
 
     def get_queen_movements(self, row_int, col_int, board):
@@ -122,24 +126,24 @@ class Piece:
         moves = set()
         if (col_int - 1 >= 0):
             if (row_int + 2 < rows):
-                moves.add(get_position_string(get_col_char(col_int - 1), row_int + 2))
+                moves.add(get_position_tuple(get_col_char(col_int - 1), row_int + 2))
             if (row_int - 2 >= 0):
-                moves.add(get_position_string(get_col_char(col_int - 1), row_int - 2))
+                moves.add(get_position_tuple(get_col_char(col_int - 1), row_int - 2))
         if (col_int - 2 >= 0):
             if (row_int + 1 < rows):
-                moves.add(get_position_string(get_col_char(col_int - 2), row_int + 1))
+                moves.add(get_position_tuple(get_col_char(col_int - 2), row_int + 1))
             if (row_int - 1 >= 0):
-                moves.add(get_position_string(get_col_char(col_int - 2), row_int - 1))
+                moves.add(get_position_tuple(get_col_char(col_int - 2), row_int - 1))
         if (col_int + 1 < cols):
             if (row_int + 2 < rows):
-                moves.add(get_position_string(get_col_char(col_int + 1), row_int + 2))
+                moves.add(get_position_tuple(get_col_char(col_int + 1), row_int + 2))
             if (row_int - 2 >= 0):
-                moves.add(get_position_string(get_col_char(col_int + 1), row_int - 2))
+                moves.add(get_position_tuple(get_col_char(col_int + 1), row_int - 2))
         if (col_int + 2 < cols):
             if (row_int + 1 < rows):
-                moves.add(get_position_string(get_col_char(col_int + 2), row_int + 1))
+                moves.add(get_position_tuple(get_col_char(col_int + 2), row_int + 1))
             if (row_int - 1 >= 0):
-                moves.add(get_position_string(get_col_char(col_int + 2), row_int - 1))
+                moves.add(get_position_tuple(get_col_char(col_int + 2), row_int - 1))
         return moves
 
     def to_string(self):
@@ -253,7 +257,7 @@ class Board:
 
     def able_to_move_to(self, location):
         grid = self.get_grid(location)
-        return (grid.piece is None) and (not grid.is_blocked) and (not grid.is_reached)
+        return not (grid.piece != None or grid.is_blocked or grid.is_reached)
 
     def to_string(self):
         string = ""
@@ -382,16 +386,10 @@ def run_BFS():
             board.set_piece(Piece("Obstacle", True), obstacle[1:], obstacle[0])
     # Add pieces into the board
     state = State(None, [], 0)
-    def add_pieces(type):
+    def add_enemies(type):
         if type in enemies:
             for pos in enemies[type]:
                 board.set_piece(Piece(type, True), pos[1:], pos[0])
-        if type in own_pieces:
-            for pos in own_pieces[type]:
-                board.set_piece(Piece(type, False), pos[1:], pos[0])
-                if type == "King":
-                    king_location = get_position_tuple(pos[0], pos[1:])
-                    state.set_location(king_location)
     def block(type):
         blocked = set()
         if type in enemies:
@@ -400,12 +398,21 @@ def run_BFS():
                 blocked_pos = piece.get_blocked_positions(pos[1:], pos[0], board)
                 blocked = blocked.union(blocked_pos)
         return blocked
+    def add_own(type):
+        if type in own_pieces:
+            for pos in own_pieces[type]:
+                board.set_piece(Piece(type, False), pos[1:], pos[0])
+                if type == "King":
+                    king_location = get_position_tuple(pos[0], pos[1:])
+                    state.set_location(king_location)
     for type in enemies_names:
-        add_pieces(type)
+        add_enemies(type)
     for type in enemies_names:
-        blocked = block(type)
+        blocked = list(block(type))
         for position in blocked:
             board.set_block(position)
+    for type in own_names:
+        add_own(type)
     # Add goals to the board
     for pos in goals:
         if pos != "-":
@@ -415,7 +422,4 @@ def run_BFS():
     king = board.get_grid(king_location).piece
     # Search for path
     moves, nodesExplored = search(king, board, state, goals) #For reference
-    print(board.to_string())
     return moves, nodesExplored #Format to be returned
-
-print(run_BFS())
