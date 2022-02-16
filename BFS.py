@@ -13,93 +13,120 @@ class Piece:
         if self.is_enemy == False:
             return blocked
         if self.type == "King":
-            for i in range(row - 1, row + 2):
-                for j in range(col - 1, col + 2):
-                    if i >= 0 and i < rows and j >= 0 and j < cols:
-                        blocked.add(get_position_tuple(get_col_char(j), i))
-        if self.type == "Queen" or self.type == "Rook":
-            for i in range(row + 1, rows):
-                if board.is_occupied_at(i, col):
-                    break
-                blocked.add(get_position_tuple(col_char, i))
-            i = row - 1
-            while i >= 0:
-                if board.is_occupied_at(i, col):
-                    break
-                blocked.add(get_position_tuple(col_char, i))
-                i -= 1
-            for j in range(col + 1, cols):
-                if board.is_occupied_at(row, j):
-                    break
-                blocked.add(get_position_tuple(get_col_char(j), row_char))
-            j = col - 1
-            while j >= 0:
-                if board.is_occupied_at(row, j):
-                    break
-                blocked.add(get_position_tuple(get_col_char(j), row_char))
-                j -= 1
-        if self.type == "Queen" or self.type == "Bishop":
-            i = row
-            j = col
-            count = 0
-            plus_stop = False
-            minus_stop = False
-            while i >= 0:
-                if j + count < cols and (plus_stop == False):
-                    if board.is_occupied_at(i, j + count):
-                        if not(i == row and j == col):
-                            plus_stop = True
-                    else:
-                        blocked.add(get_position_tuple(get_col_char(j + count), i))
-                if j - count >= 0 and (minus_stop == False):
-                    if board.is_occupied_at(i, j - count):
-                        if not(i == row and j == col):
-                            minus_stop = True
-                    else:
-                        blocked.add(get_position_tuple(get_col_char(j - count), i))
-                i -= 1
-                count += 1
-            i = row
-            count = 0
-            plus_stop = False
-            minus_stop = False
-            while i < rows:
-                if j + count < cols and (plus_stop == False):
-                    if board.is_occupied_at(i, j + count):
-                        if not(i == row and j == col):
-                            plus_stop = True
-                    else:
-                        blocked.add(get_position_tuple(get_col_char(j + count), i))
-                if j - count >= 0 and (minus_stop == False):
-                    if board.is_occupied_at(i, j - count):
-                        if not(i == row and j == col):
-                            minus_stop = True
-                    else:
-                        blocked.add(get_position_tuple(get_col_char(j - count), i))
-                i += 1
-                count += 1
+            blocked = blocked.union(self.get_king_movements(row, col, rows, cols))
+        if self.type == "Queen":
+            blocked = blocked.union(self.get_queen_movements(row, col, rows, cols, board))
+        if self.type == "Bishop":
+            blocked = blocked.union(self.get_bishop_movements(row, col, rows, cols, board))
+        if self.type == "Rook":
+            blocked = blocked.union(self.get_rook_movements(row, col, rows, cols, board))
         if self.type == "Knight":
-            if (col - 1 >= 0):
-                if (row + 2 < rows):
-                    blocked.add(get_position_string(get_col_char(col - 1), row + 2))
-                if (row - 2 >= 0):
-                    blocked.add(get_position_string(get_col_char(col - 1), row - 2))
-            if (col - 2 >= 0):
-                if (row + 1 < rows):
-                    blocked.add(get_position_string(get_col_char(col - 2), row + 1))
-                if (row - 1 >= 0):
-                    blocked.add(get_position_string(get_col_char(col - 2), row - 1))
-            if (col + 1 < cols):
-                if (row + 2 < rows):
-                    blocked.add(get_position_string(get_col_char(col + 1), row + 2))
-                if (row - 2 >= 0):
-                    blocked.add(get_position_string(get_col_char(col + 1), row - 2))
-            if (col + 2 < cols):
-                if (row + 1 < rows):
-                    blocked.add(get_position_string(get_col_char(col + 2), row + 1))
-                if (row - 1 >= 0):
-                    blocked.add(get_position_string(get_col_char(col + 2), row - 1))
+            blocked = blocked.union(self.get_knight_movements(row, col, rows, cols))
         return blocked
+
+    def get_king_movements(self, row_int, col_int, rows, cols):
+        moves = set()
+        for i in range(row_int - 1, row_int + 2):
+            for j in range(col_int - 1, col_int + 2):
+                if i >= 0 and i < rows and j >= 0 and j < cols:
+                    moves.add(get_position_tuple(get_col_char(j), i))
+        return moves
+
+    def get_queen_movements(self, row_int, col_int, rows, cols, board):
+        moves = self.get_bishop_movements(row_int, col_int, rows, cols, board)
+        moves = moves.union(self.get_rook_movements(row_int, col_int, rows, cols, board))
+        return moves
+
+    def get_bishop_movements(self, row_int, col_int, rows, cols, board):
+        moves = set()
+        i = row_int
+        j = col_int
+        count = 0
+        plus_stop = False
+        minus_stop = False
+        while i >= 0:
+            if j + count < cols and (plus_stop == False):
+                if board.is_occupied_at(i, j + count):
+                    if not(i == row_int and j == col_int):
+                        plus_stop = True
+                else:
+                    moves.add(get_position_tuple(get_col_char(j + count), i))
+            if j - count >= 0 and (minus_stop == False):
+                if board.is_occupied_at(i, j - count):
+                    if not(i == row_int and j == col_int):
+                        minus_stop = True
+                else:
+                    moves.add(get_position_tuple(get_col_char(j - count), i))
+            i -= 1
+            count += 1
+        i = row_int
+        count = 0
+        plus_stop = False
+        minus_stop = False
+        while i < rows:
+            if j + count < cols and (plus_stop == False):
+                if board.is_occupied_at(i, j + count):
+                    if not(i == row_int and j == col_int):
+                        plus_stop = True
+                else:
+                    moves.add(get_position_tuple(get_col_char(j + count), i))
+            if j - count >= 0 and (minus_stop == False):
+                if board.is_occupied_at(i, j - count):
+                    if not(i == row_int and j == col_int):
+                        minus_stop = True
+                else:
+                    moves.add(get_position_tuple(get_col_char(j - count), i))
+            i += 1
+            count += 1
+        return moves
+
+    def get_rook_movements(self, row_int, col_int, rows, cols, board):
+        moves = set()
+        for i in range(row_int + 1, rows):
+            if board.is_occupied_at(i, col_int):
+                break
+            moves.add(get_position_tuple(get_col_char(col_int), i))
+        i = row_int - 1
+        while i >= 0:
+            if board.is_occupied_at(i, col_int):
+                break
+            moves.add(get_position_tuple(get_col_char(col_int), i))
+            i -= 1
+        for j in range(col_int + 1, cols):
+            if board.is_occupied_at(row_int, j):
+                break
+            moves.add(get_position_tuple(get_col_char(j), str(row_int)))
+        j = col_int - 1
+        while j >= 0:
+            if board.is_occupied_at(row_int, j):
+                break
+            moves.add(get_position_tuple(get_col_char(j), str(row_int)))
+            j -= 1
+        return moves
+
+    def get_knight_movements(self, row_int, col_int, rows, cols):
+        moves = set()
+        if (col_int - 1 >= 0):
+            if (row_int + 2 < rows):
+                moves.add(get_position_string(get_col_char(col_int - 1), row_int + 2))
+            if (row_int - 2 >= 0):
+                moves.add(get_position_string(get_col_char(col_int - 1), row_int - 2))
+        if (col_int - 2 >= 0):
+            if (row_int + 1 < rows):
+                moves.add(get_position_string(get_col_char(col_int - 2), row_int + 1))
+            if (row_int - 1 >= 0):
+                moves.add(get_position_string(get_col_char(col_int - 2), row_int - 1))
+        if (col_int + 1 < cols):
+            if (row_int + 2 < rows):
+                moves.add(get_position_string(get_col_char(col_int + 1), row_int + 2))
+            if (row_int - 2 >= 0):
+                moves.add(get_position_string(get_col_char(col_int + 1), row_int - 2))
+        if (col_int + 2 < cols):
+            if (row_int + 1 < rows):
+                moves.add(get_position_string(get_col_char(col_int + 2), row_int + 1))
+            if (row_int - 1 >= 0):
+                moves.add(get_position_string(get_col_char(col_int + 2), row_int - 1))
+        return moves
 
     def to_string(self):
         if self.is_enemy:
@@ -136,8 +163,10 @@ class Grid:
     def to_string(self):
         if self.piece != None:
             return "[" + self.piece.to_string() + "]"
-        elif self.is_blocked == True:
+        elif self.is_blocked:
             return "[Block]"
+        elif self.is_goal:
+            return "[Goal ]"
         return "[     ]"
 
 class Board:
@@ -181,10 +210,13 @@ class Board:
         return string
 
 class State:
-    def __init__(self, king, moves, nodesExplored):
-        self.king = king # own king
+    def __init__(self, location, moves, nodesExplored):
+        self.location = location
         self.moves = moves
         self.nodesExplored = nodesExplored
+
+    def set_location(self, location):
+        self.location = location
 
 def get_col_int(col_char):
     return ord(col_char) - 97
@@ -198,10 +230,10 @@ def get_position_string(col_char, row):
 def get_position_tuple(col_char, row):
     return (col_char, row)
 
-def search(board, goals):
+def search(board, state, goals):
     moves = []
     nodesExplored = 0
-
+    # no goals, return empty list
     if (len(goals) == 0 or (len(goals) == 1 and "-" in goals)):
         return moves, nodesExplored
 
@@ -263,6 +295,7 @@ def run_BFS():
         for obstacle in obstacles:
             board.set_piece(Piece("Obstacle", True), obstacle[1:], obstacle[0])
     # Add pieces into the board
+    state = State(None, [], 0)
     def add_enemies(type):
         blocked = set()
         if type in enemies:
@@ -276,6 +309,9 @@ def run_BFS():
         if type in own_pieces:
             for pos in own_pieces[type]:
                 board.set_piece(Piece(type, False), pos[1:], pos[0])
+                if type == "King":
+                    king_location = get_position_tuple(pos[0], pos[1:])
+                    state.set_location(king_location)
     for type in enemies_names:
         add_own(type)
         blocked = add_enemies(type)
@@ -288,8 +324,9 @@ def run_BFS():
 
     print(board.to_string())
 
+    print(state.location)
     # Search for path
-    moves, nodesExplored = search(board, goals) #For reference
+    moves, nodesExplored = search(board, state, goals) #For reference
     return moves, nodesExplored #Format to be returned
 
 print(run_BFS())
