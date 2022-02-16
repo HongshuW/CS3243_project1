@@ -26,15 +26,18 @@ class Piece:
         return blocked
 
     def get_king_movements(self, row_int, col_int, board):
+        return self.get_king_movements_list(row_int, col_int, board)
+
+    def get_king_movements_list(self, row_int, col_int, board):
         rows = board.height
         cols = board.width
-        moves = set()
+        moves = list()
         for i in range(row_int - 1, row_int + 2):
             for j in range(col_int - 1, col_int + 2):
                 if i >= 0 and i < rows and j >= 0 and j < cols:
                     position = get_position_tuple(get_col_char(j), i)
                     if board.able_to_move_to(position):
-                        moves.add(position)
+                        moves.append(position)
         return moves
 
     def get_queen_movements(self, row_int, col_int, board):
@@ -222,10 +225,8 @@ class Board:
         col = get_col_int(col_char)
         self.grids[row][col].set_is_goal()
 
-    def set_block(self, row_char, col_char):
-        row = int(row_char)
-        col = get_col_int(col_char)
-        self.grids[row][col].set_is_blocked()
+    def set_block(self, location):
+        self.get_grid(location).set_is_blocked()
 
     def set_reached(self, location):
         self.get_grid(location).set_is_reached()
@@ -238,7 +239,7 @@ class Board:
         self.grids[child_row][child_col].set_parent(self.grids[parent_row][parent_col])
 
     def is_occupied_at(self, row_int, col_int):
-        return self.grids[row_int][col_int].piece != None
+        return not (self.grids[row_int][col_int].piece is None)
 
     def is_goal(self, location):
         row = int(location[1])
@@ -281,7 +282,7 @@ def get_position_string(col_char, row):
     return col_char + str(row)
 
 def get_position_tuple(col_char, row):
-    return (col_char, row)
+    return (col_char, int(row))
 
 def get_moves_from_goal(grid):
     moves = deque()
@@ -315,7 +316,7 @@ def search(king, board, state, goals):
             return moves, nodesExplored
         row_char = current[1]
         col_char = current[0]
-        movements = list(king.get_king_movements(int(row_char), get_col_int(col_char), board))
+        movements = king.get_king_movements_list(int(row_char), get_col_int(col_char), board)
         for movement in movements:
             if not board.is_reached(movement):
                 frontier.append(movement)
@@ -332,11 +333,11 @@ def run_BFS():
     # Parse the file
     input_file = open(sys.argv[1], "r")
     lines = input_file.readlines()
-    rows = int(lines[0][5:])
-    cols = int(lines[1][5:])
-    num_of_obstacles = int(lines[2][20:])
+    rows = int(lines[0].split(":")[-1])
+    cols = int(lines[1].split(":")[-1])
+    num_of_obstacles = int(lines[2].split(":")[-1])
     # list of positions of the obstacles
-    obstacles = lines[3][38:].split()
+    obstacles = lines[3].split(":")[-1].split()
     # record all costs
     costs = dict()
     i = 5
@@ -349,7 +350,7 @@ def run_BFS():
     # record positions of enemies
     enemies = dict()
     enemies_names = lines[i][16:49].split(", ")
-    enemies_count = lines[i][66:].split()
+    enemies_count = lines[i].split(":")[-1].split()
     for j in range(5):
         if (int(enemies_count[j]) > 0):
             enemies[enemies_names[j]] = []
@@ -361,7 +362,7 @@ def run_BFS():
     # record positions of own pieces
     own_pieces = dict()
     own_names = lines[i][14:47].split(", ")
-    own_count = lines[i][64:].split()
+    own_count = lines[i].split(":")[-1].split()
     for j in range(5):
         if (int(own_count[j]) > 0):
             own_pieces[own_names[j]] = []
@@ -381,27 +382,30 @@ def run_BFS():
             board.set_piece(Piece("Obstacle", True), obstacle[1:], obstacle[0])
     # Add pieces into the board
     state = State(None, [], 0)
-    def add_enemies(type):
-        blocked = set()
+    def add_pieces(type):
         if type in enemies:
             for pos in enemies[type]:
-                piece = Piece(type, True)
-                board.set_piece(piece, pos[1:], pos[0])
-                blocked_pos = piece.get_blocked_positions(pos[1:], pos[0], board)
-                blocked = blocked.union(blocked_pos)
-        return blocked
-    def add_own(type):
+                board.set_piece(Piece(type, True), pos[1:], pos[0])
         if type in own_pieces:
             for pos in own_pieces[type]:
                 board.set_piece(Piece(type, False), pos[1:], pos[0])
                 if type == "King":
                     king_location = get_position_tuple(pos[0], pos[1:])
                     state.set_location(king_location)
+    def block(type):
+        blocked = set()
+        if type in enemies:
+            for pos in enemies[type]:
+                piece = Piece(type, True)
+                blocked_pos = piece.get_blocked_positions(pos[1:], pos[0], board)
+                blocked = blocked.union(blocked_pos)
+        return blocked
     for type in enemies_names:
-        add_own(type)
-        blocked = add_enemies(type)
+        add_pieces(type)
+    for type in enemies_names:
+        blocked = block(type)
         for position in blocked:
-            board.set_block(position[1], position[0])
+            board.set_block(position)
     # Add goals to the board
     for pos in goals:
         if pos != "-":
@@ -411,4 +415,7 @@ def run_BFS():
     king = board.get_grid(king_location).piece
     # Search for path
     moves, nodesExplored = search(king, board, state, goals) #For reference
+    print(board.to_string())
     return moves, nodesExplored #Format to be returned
+
+print(run_BFS())
