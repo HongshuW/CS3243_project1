@@ -298,8 +298,36 @@ def get_moves_from_goal(grid):
         parent = grid.parent
     return list(moves)
 
-def search():
-    pass
+def search(king, board, state, goals):
+    moves = []
+    nodesExplored = 0
+    # no goals, return empty list
+    if (len(goals) == 0 or (len(goals) == 1 and "-" in goals)):
+        return moves, nodesExplored
+
+    # DFS uses stack
+    frontier = deque()
+    frontier.append(state.location)
+    board.set_reached(state.location)
+    length = 1
+    while length > 0:
+        current = frontier.pop()
+        length -= 1
+        nodesExplored += 1
+        if board.is_goal(current):
+            grid = board.get_grid(current)
+            moves = get_moves_from_goal(grid)
+            return moves, nodesExplored
+        row_char = current[1]
+        col_char = current[0]
+        movements = king.get_king_movements_list(int(row_char), get_col_int(col_char), board)
+        for movement in movements:
+            if not board.is_reached(movement):
+                frontier.append(movement)
+                length += 1
+                board.set_reached(movement)
+                board.set_parent(movement, current)
+    return moves, nodesExplored
 
 
 ### DO NOT EDIT/REMOVE THE FUNCTION HEADER BELOW###
@@ -392,5 +420,7 @@ def run_DFS():
 
     king_location = state.location
     king = board.get_grid(king_location).piece
-    moves, nodesExplored = search() #For reference
+    moves, nodesExplored = search(king, board, state, goals) #For reference
     return moves, nodesExplored #Format to be returned
+
+print(run_DFS())
