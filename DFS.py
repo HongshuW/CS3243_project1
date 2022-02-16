@@ -422,5 +422,3 @@ def run_DFS():
     king = board.get_grid(king_location).piece
     moves, nodesExplored = search(king, board, state, goals) #For reference
     return moves, nodesExplored #Format to be returned
-
-print(run_DFS())
