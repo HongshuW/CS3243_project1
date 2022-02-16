@@ -1,4 +1,5 @@
 import sys
+from collections import deque
 
 # Helper functions to aid in your implementation. Can edit/remove
 class Piece:
@@ -6,38 +7,44 @@ class Piece:
         self.type = type
         self.is_enemy = is_enemy
 
-    def get_blocked_positions(self, row_char, col_char, rows, cols, board):
+    def get_blocked_positions(self, row_char, col_char, board):
         blocked = set()
         row = int(row_char)
         col = get_col_int(col_char)
         if self.is_enemy == False:
             return blocked
         if self.type == "King":
-            blocked = blocked.union(self.get_king_movements(row, col, rows, cols))
+            blocked = blocked.union(self.get_king_movements(row, col, board))
         if self.type == "Queen":
-            blocked = blocked.union(self.get_queen_movements(row, col, rows, cols, board))
+            blocked = blocked.union(self.get_queen_movements(row, col, board))
         if self.type == "Bishop":
-            blocked = blocked.union(self.get_bishop_movements(row, col, rows, cols, board))
+            blocked = blocked.union(self.get_bishop_movements(row, col, board))
         if self.type == "Rook":
-            blocked = blocked.union(self.get_rook_movements(row, col, rows, cols, board))
+            blocked = blocked.union(self.get_rook_movements(row, col, board))
         if self.type == "Knight":
-            blocked = blocked.union(self.get_knight_movements(row, col, rows, cols))
+            blocked = blocked.union(self.get_knight_movements(row, col, board))
         return blocked
 
-    def get_king_movements(self, row_int, col_int, rows, cols):
+    def get_king_movements(self, row_int, col_int, board):
+        rows = board.height
+        cols = board.width
         moves = set()
         for i in range(row_int - 1, row_int + 2):
             for j in range(col_int - 1, col_int + 2):
                 if i >= 0 and i < rows and j >= 0 and j < cols:
-                    moves.add(get_position_tuple(get_col_char(j), i))
+                    position = get_position_tuple(get_col_char(j), i)
+                    if board.able_to_move_to(position):
+                        moves.add(position)
         return moves
 
-    def get_queen_movements(self, row_int, col_int, rows, cols, board):
-        moves = self.get_bishop_movements(row_int, col_int, rows, cols, board)
-        moves = moves.union(self.get_rook_movements(row_int, col_int, rows, cols, board))
+    def get_queen_movements(self, row_int, col_int, board):
+        moves = self.get_bishop_movements(row_int, col_int, board)
+        moves = moves.union(self.get_rook_movements(row_int, col_int, board))
         return moves
 
-    def get_bishop_movements(self, row_int, col_int, rows, cols, board):
+    def get_bishop_movements(self, row_int, col_int, board):
+        rows = board.height
+        cols = board.width
         moves = set()
         i = row_int
         j = col_int
@@ -80,7 +87,9 @@ class Piece:
             count += 1
         return moves
 
-    def get_rook_movements(self, row_int, col_int, rows, cols, board):
+    def get_rook_movements(self, row_int, col_int, board):
+        rows = board.height
+        cols = board.width
         moves = set()
         for i in range(row_int + 1, rows):
             if board.is_occupied_at(i, col_int):
@@ -104,7 +113,9 @@ class Piece:
             j -= 1
         return moves
 
-    def get_knight_movements(self, row_int, col_int, rows, cols):
+    def get_knight_movements(self, row_int, col_int, board):
+        rows = board.height
+        cols = board.width
         moves = set()
         if (col_int - 1 >= 0):
             if (row_int + 2 < rows):
@@ -142,12 +153,17 @@ class Grid:
         self.piece = None
         self.is_goal = False
         self.is_blocked = False
+        self.is_reached = False
+        self.parent = None
 
     def get_row_as_int(self):
         return self.row
 
     def get_col_as_int(self):
         return ord(self.col) - 97
+
+    def get_location(self):
+        return get_position_tuple(self.col, self.row)
 
     def set_piece(self, piece):
         if self.piece == None:
@@ -160,6 +176,12 @@ class Grid:
     def set_is_blocked(self):
         self.is_blocked = True
 
+    def set_is_reached(self):
+        self.is_reached = True
+
+    def set_parent(self, parent):
+        self.parent = parent
+
     def to_string(self):
         if self.piece != None:
             return "[" + self.piece.to_string() + "]"
@@ -171,6 +193,8 @@ class Grid:
 
 class Board:
     def __init__(self, width, height, costs):
+        self.width = width
+        self.height = height
         # create an empty board of size width * height that does not contain pieces
         self.grids = []
         for row in range(height):
@@ -182,6 +206,11 @@ class Board:
                 else:
                     row_array.append(Grid(row, get_col_char(col), 1))
             self.grids.append(row_array)
+
+    def get_grid(self, location):
+        row = int(location[1])
+        col = get_col_int(location[0])
+        return self.grids[row][col]
 
     def set_piece(self, piece, row_char, col_char):
         row = int(row_char)
@@ -198,8 +227,32 @@ class Board:
         col = get_col_int(col_char)
         self.grids[row][col].set_is_blocked()
 
+    def set_reached(self, location):
+        self.get_grid(location).set_is_reached()
+
+    def set_parent(self, child, parent):
+        child_row = int(child[1])
+        child_col = get_col_int(child[0])
+        parent_row = int(parent[1])
+        parent_col = get_col_int(parent[0])
+        self.grids[child_row][child_col].set_parent(self.grids[parent_row][parent_col])
+
     def is_occupied_at(self, row_int, col_int):
         return self.grids[row_int][col_int].piece != None
+
+    def is_goal(self, location):
+        row = int(location[1])
+        col = get_col_int(location[0])
+        return self.grids[row][col].is_goal
+
+    def is_reached(self, location):
+        row = int(location[1])
+        col = get_col_int(location[0])
+        return self.grids[row][col].is_reached
+
+    def able_to_move_to(self, location):
+        grid = self.get_grid(location)
+        return (grid.piece is None) and (not grid.is_blocked) and (not grid.is_reached)
 
     def to_string(self):
         string = ""
@@ -230,13 +283,45 @@ def get_position_string(col_char, row):
 def get_position_tuple(col_char, row):
     return (col_char, row)
 
-def search(board, state, goals):
+def get_moves_from_goal(grid):
+    moves = deque()
+    parent = grid.parent
+    while not (parent is None):
+        move = [parent.get_location(), grid.get_location()]
+        moves.appendleft(move)
+        grid = parent
+        parent = grid.parent
+    return list(moves)
+
+def search(king, board, state, goals):
     moves = []
     nodesExplored = 0
     # no goals, return empty list
     if (len(goals) == 0 or (len(goals) == 1 and "-" in goals)):
         return moves, nodesExplored
 
+    # BFS uses queue
+    frontier = deque()
+    frontier.append(state.location)
+    board.set_reached(state.location)
+    length = 1
+    while length > 0:
+        current = frontier.popleft()
+        length -= 1
+        nodesExplored += 1
+        if board.is_goal(current):
+            grid = board.get_grid(current)
+            moves = get_moves_from_goal(grid)
+            return moves, nodesExplored
+        row_char = current[1]
+        col_char = current[0]
+        movements = list(king.get_king_movements(int(row_char), get_col_int(col_char), board))
+        for movement in movements:
+            if not board.is_reached(movement):
+                frontier.append(movement)
+                length += 1
+                board.set_reached(movement)
+                board.set_parent(movement, current)
     return moves, nodesExplored
 
 
@@ -302,7 +387,7 @@ def run_BFS():
             for pos in enemies[type]:
                 piece = Piece(type, True)
                 board.set_piece(piece, pos[1:], pos[0])
-                blocked_pos = piece.get_blocked_positions(pos[1:], pos[0], rows, cols, board)
+                blocked_pos = piece.get_blocked_positions(pos[1:], pos[0], board)
                 blocked = blocked.union(blocked_pos)
         return blocked
     def add_own(type):
@@ -322,11 +407,8 @@ def run_BFS():
         if pos != "-":
             board.set_goal(pos[1:], pos[0])
 
-    print(board.to_string())
-
-    print(state.location)
+    king_location = state.location
+    king = board.get_grid(king_location).piece
     # Search for path
-    moves, nodesExplored = search(board, state, goals) #For reference
+    moves, nodesExplored = search(king, board, state, goals) #For reference
     return moves, nodesExplored #Format to be returned
-
-print(run_BFS())
