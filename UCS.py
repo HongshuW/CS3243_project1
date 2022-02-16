@@ -312,10 +312,10 @@ def search(king, board, state, goals):
     frontier = PriorityQueue()
     cost_of_origin = board.get_grid(state.location).cost
     frontier.put((cost_of_origin, state.location))
-    board.set_reached(state.location)
     length = 1
     while length > 0:
         current = frontier.get()
+        board.set_reached(current[1])
         length -= 1
         nodesExplored += 1
         if board.is_goal(current[1]):
