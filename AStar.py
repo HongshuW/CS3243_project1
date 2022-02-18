@@ -445,5 +445,3 @@ def run_AStar():
     king = board.get_grid(king_location).piece
     moves, nodesExplored, pathCost= search(king, board, state, goals) #For reference
     return moves, nodesExplored, pathCost #Format to be returned
-
-print(run_AStar())
